@@ -1,0 +1,82 @@
+[
+    {
+        "title": "How to Stream Data from DANDI",
+        "description": "Guide on streaming data directly from the DANDI Archive into pynapple for real-time data analysis."
+    },
+    {
+        "title": "Using Wavelet Transforms to Analyze Signal Data",
+        "description": "A tutorial on performing continuous wavelet transforms to capture changes in signal data over time using pynapple."
+    },
+    {
+        "title": "Filtering Signal Data with Pynapple",
+        "description": "Learn how to apply various filters (bandpass, lowpass, highpass, bandstop) to analyze signal frequencies with pynapple."
+    },
+    {
+        "title": "Analyzing Calcium Imaging Data",
+        "description": "Explore methods for working with calcium imaging data, including plotting activity and identifying head-direction cells."
+    },
+    {
+        "title": "NWB & Lazy-loading in Pynapple",
+        "description": "Understand how to efficiently load and work with NWB files using pynapple's lazy-loading features."
+    },
+    {
+        "title": "Creating Tuning Curves from Neural Data",
+        "description": "Step-by-step instructions on generating and analyzing tuning curves for different neural activity datasets."
+    },
+    {
+        "title": "Understanding TsGroup and Metadata Handling",
+        "description": "Gain insights into organizing and manipulating groups of time series data with metadata using pynapple's TsGroup."
+    },
+    {
+        "title": "Performing Peri-Event Time Histogram (PETH) Analysis",
+        "description": "How to align events with time series data to analyze the relationship between stimuli and neural activity."
+    },
+    {
+        "title": "High Performance Filtering Techniques",
+        "description": "Compare Butterworth and Windowed-sinc filters for performance and precision, especially for large datasets."
+    },
+    {
+        "title": "Decoding Neural Activity for Behavioral Insights",
+        "description": "Learn techniques for decoding neural activity to infer behavioral states or stimuli presence using pynapple."
+    },
+    {
+        "title": "Advanced Time Series Manipulation with Pynapple",
+        "description": "Delve deeper into time series slicing, indexing, and arithmetic operations tailored for neuroscience data."
+    },
+    {
+        "title": "Using Pynapple for TsdFrame and TsdTensor Operations",
+        "description": "Understand the different data structures available in pynapple for column-based and multi-dimensional data."
+    },
+    {
+        "title": "Applying Phase Coupling Analysis to Neural Spikes",
+        "description": "Techniques to explore the relationship between neural spikes and oscillatory phase using filtering and Hilbert transforms."
+    },
+    {
+        "title": "Streaming and Analyzing Large Datasets Efficiently",
+        "description": "Leveraging pynapple's capabilities for streaming data from large datasets without overwhelming memory usage."
+    },
+    {
+        "title": "Creating Continuous Spectral Density Estimates",
+        "description": "Compute power spectral densities across different epochs for thorough analysis of signal characteristics."
+    },
+    {
+        "title": "Conducting Autocorrelogram and Crosscorrelogram Analysis",
+        "description": "Guide on how to use pynapple to compute and interpret correlograms for assessing neuronal synchrony."
+    },
+    {
+        "title": "Efficiently Saving and Loading Pynapple Objects",
+        "description": "Best practices for saving and restoring pynapple objects using NPZ and NWB formats."
+    },
+    {
+        "title": "Handling Memory Maps During Analysis",
+        "description": "Effectively use numpy and zarr memory maps with pynapple for scalable data processing."
+    },
+    {
+        "title": "Wavelet Parametrization for Time-Frequency Analysis",
+        "description": "Understand how wavelet parameters affect resolution and reconstruction fidelity in temporal analyses."
+    },
+    {
+        "title": "Extracting and Interpreting LFP Data from NWB Files",
+        "description": "How to extract and analyze Local Field Potential data from NWB recordings using pynapple."
+    }
+]
