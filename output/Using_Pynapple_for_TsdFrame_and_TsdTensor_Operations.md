@@ -1,96 +1,109 @@
-# Using Pynapple for TsdFrame and TsdTensor Operations
+Here's a how-to guide for using `pynapple` for `TsdFrame` and `TsdTensor` operations, based on the provided documentation:
 
-## Overview
-Pynapple offers specific data structures to handle different types of time-series data efficiently. This guide focuses on two key data structures: `TsdFrame` for column-based data and `TsdTensor` for multi-dimensional data. Understanding how to use these structures will help you manage and analyze your time-series data effectively.
+## Using Pynapple for TsdFrame and TsdTensor Operations
 
-## Data Structures
+### Introduction
+
+`pynapple` provides specialized data structures for handling time series data, specifically `TsdFrame` for column-based data and `TsdTensor` for multi-dimensional data. This guide will help you understand how to initialize, manipulate, and perform operations on these two data structures.
+
+### Prerequisites
+
+Make sure you have `pynapple` installed, along with its dependencies like `numpy` and `pandas`. You can install some additional visualization libraries if needed, such as `matplotlib` and `seaborn`.
+
+```bash
+pip install pynapple numpy pandas matplotlib seaborn
+```
 
 ### TsdFrame
-- **Definition**: The `TsdFrame` is designed for column-based data representations, similar to a pandas DataFrame. It allows easy manipulation and access to individual columns of time-series data.
-- **Initialization**: You can create a `TsdFrame` by providing time and data along with optional column labels.
+
+#### Initialization
+
+A `TsdFrame` is suitable for column-based data. It is akin to a `pandas.DataFrame`, but with a temporal aspect.
 
 ```python
-import pynapple as nap
 import numpy as np
+import pynapple as nap
 
-# Example initialization of a TsdFrame
-t = np.arange(100)  # Time
-d = np.random.rand(100, 3)  # Data for three columns
-columns = ['a', 'b', 'c']  # Column labels
-tsdframe = nap.TsdFrame(t=t, d=d, columns=columns)
+# Initialize a TsdFrame with random data
+time = np.arange(100)  # Time indices
+data = np.random.rand(100, 3)  # Data with 3 columns
+columns = ['a', 'b', 'c']
+
+tsdframe = nap.TsdFrame(t=time, d=data, columns=columns)
+print(tsdframe)
 ```
 
-- **Accessing Data**: You can access specific columns, rows, or utilize pandas-like operations.
+#### Conversion to Pandas
+
+Convert a `TsdFrame` to a `pandas.DataFrame` for more traditional dataframe operations.
 
 ```python
-# Access first column
-first_column = tsdframe['a']
+df = tsdframe.as_dataframe()
+print(df)
+```
+
+#### Column Operations
+
+You can perform operations on columns, similar to `pandas`.
+
+```python
+# Access a column
+column_a = tsdframe.loc['a']
+print(column_a)
 
 # Access multiple columns
-selected_columns = tsdframe[['a', 'c']]
-
-# Get as pandas DataFrame
-df = tsdframe.as_dataframe()
+columns_ac = tsdframe.loc[['a', 'c']]
+print(columns_ac)
 ```
 
-- **Attributes**: You can access attributes such as `.values` for the data array, `.shape` for dimensions, and `.ndim` to know the number of dimensions.
+#### Arithmetic Operations
+
+Perform arithmetic operations directly on the `TsdFrame`.
+
+```python
+# Add a constant to each element
+result = tsdframe + 1
+print(result)
+```
 
 ### TsdTensor
-- **Definition**: The `TsdTensor` is intended for managing multi-dimensional time-series data, such as in movies or multi-channel recordings. Each dimension can represent a different variable in addition to time.
-- **Initialization**: Similar to `TsdFrame`, you can create a `TsdTensor` by providing time and multi-dimensional data.
+
+#### Initialization
+
+A `TsdTensor` is designed for data with more than two dimensions, often used with movie-like data where you have time, height, and width dimensions, for example.
 
 ```python
-# Example initialization of a TsdTensor
-t = np.arange(100)  # Time
-d = np.random.rand(100, 5, 5)  # Multi-dimensional data (e.g., 5x5 grid)
-tsdtensor = nap.TsdTensor(t=t, d=d, time_units="s")
+# Initialize a TsdTensor with random data
+tsdtensor = nap.TsdTensor(t=np.arange(100), d=np.random.rand(100, 5, 5))
+print(tsdtensor)
 ```
 
-- **Accessing Data**: You can slice these tensors in a similar manner to numpy arrays, allowing for powerful data manipulation.
+#### Slicing
+
+Use slicing to access different parts of a `TsdTensor`. The first dimension is always time.
 
 ```python
-# Access a slice of the tensor
-slice_tensor = tsdtensor[0:10]  # First 10 time points
+# Get the first 10 elements along the time dimension
+slice_t = tsdtensor[0:10]
+print(slice_t)
 
-# Access a specific element in the tensor
-element = tsdtensor[0]  # First element in the first dimension
+# Get the first element (as a numpy array) across all dimensions
+first_element = tsdtensor[0]
+print(first_element)
 ```
 
-- **Attributes**: Similar to `TsdFrame`, you can access attributes such as `.values`, `.shape`, and `.ndim`.
+#### Arithmetic Operations
 
-## Operations
-
-### Slicing
-Both `TsdFrame` and `TsdTensor` allow you to slice and access their contents in a way that retains the time support for the data you extract.
+Perform arithmetic operations if the dimensionality matches.
 
 ```python
-# For TsdFrame (Columns can be sliced similarly to pandas DataFrames)
-first_ten_rows = tsdframe[:10]  # First 10 rows of the dataframe
+# Subtraction of an array
+subtract_result = tsdtensor - np.ones((100, 5, 5))
+print(subtract_result)
 ```
 
-### Arithmetic Operations
-You can perform arithmetic operations directly on objects of these types, which will output another object of the same type, maintaining the time structure.
+### Conclusion
 
-```python
-# Element-wise operations
-result = tsdframe + 1  # Adds 1 to each element in the TsdFrame
-```
+With `pynapple`, you can harness structured time series data using `TsdFrame` for columnar data and `TsdTensor` for multi-dimensional data. The framework seamlessly integrates with `numpy` and `pandas`, allowing you to leverage rich existing ecosystems for data manipulation and analysis.
 
-### Conversion to Pandas
-Both `TsdFrame` and `Tsd` can be easily converted to their respective pandas types, allowing for further analysis or visualization using pandas tools.
-
-```python
-# Convert TsdFrame to pandas DataFrame
-df_from_tsdf = tsdframe.as_dataframe()
-```
-
-### Combining Data
-When working with two separate time series represented by either `TsdFrame` or `TsdTensor`, you can concatenate them along the appropriate axis, provided the time indices are compatible.
-
-```python
-# Concatenating two TsdFrames vertically if they share the same columns
-combined_frame = np.concatenate((tsdframe1, tsdframe2), axis=0)
-```
-
-## Conclusion
-With `TsdFrame` and `TsdTensor`, Pynapple provides versatile data structures for managing both column-based and multi-dimensional time-series data. Use these structures effectively to streamline your data analysis and make the most of your time-series data.
+Refer to the official `pynapple` documentation for deeper insights into these structures and advanced features.

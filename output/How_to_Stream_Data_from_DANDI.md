@@ -1,92 +1,108 @@
-# How to Stream Data from DANDI
+Here's a step-by-step guide on how to stream data directly from the DANDI Archive into pynapple for real-time data analysis:
 
-This guide outlines the steps to stream data directly from the DANDI Archive into the pynapple package for real-time data analysis. By following these instructions, you will be able to efficiently access and process data without needing to download entire datasets.
+### Step 1: Install Required Packages
 
-## Step-by-Step Instructions
+Ensure you have the necessary packages installed. You will need `matplotlib`, `seaborn`, `fsspec`, and `dandi`. You can install them using pip:
 
-1. **Install Necessary Packages**
-   Ensure you have the required packages installed. You can install them using pip:
+```bash
+pip install matplotlib seaborn fsspec dandi
+```
 
-   ```bash
-   pip install matplotlib seaborn dandi fsspec pynwb h5py
-   ```
+### Step 2: Import the Necessary Libraries
 
-2. **Import the Required Libraries**
-   Start your Python script or Jupyter Notebook by importing the necessary libraries:
+Start by importing the required libraries in your Python script:
 
-   ```python
-   from pynwb import NWBHDF5IO
-   from dandi.dandiapi import DandiAPIClient
-   import fsspec
-   from fsspec.implementations.cached import CachingFileSystem
-   import h5py
-   import pynapple as nap
-   import matplotlib.pyplot as plt
-   import seaborn as sns
-   import numpy as np
-   ```
+```python
+from pynwb import NWBHDF5IO
+from dandi.dandiapi import DandiAPIClient
+import fsspec
+from fsspec.implementations.cached import CachingFileSystem
+import h5py
+import pynapple as nap
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+```
 
-3. **Define the DANDI Data Set**
-   Specify the `dandiset_id` and the `filepath` to the data you want to stream. For example:
+### Step 3: Configure the DANDI Client
 
-   ```python
-   dandiset_id, filepath = (
-       "000582",
-       "sub-10073/sub-10073_ses-17010302_behavior+ecephys.nwb",
-   )
-   ```
+Use the DANDI API Client to access the dataset. Specify the dandiset ID and the file path to the NWB file you want to access:
 
-4. **Connect to the DANDI Archive**
-   Use `DandiAPIClient()` to connect to DANDI. This allows you to stream the data directly from the archive.
+```python
+dandiset_id, filepath = ("000582", "sub-10073/sub-10073_ses-17010302_behavior+ecephys.nwb")
+```
 
-   ```python
-   with DandiAPIClient() as client:
-       asset = client.get_dandiset(dandiset_id, "draft").get_asset_by_path(filepath)
-       s3_url = asset.get_content_url(follow_redirects=1, strip_query=True)
-   ```
+### Step 4: Obtain the Streaming URL
 
-5. **Create a Virtual Filesystem**
-   Set up a virtual filesystem that uses the HTTP protocol to access the data:
+Connect to the DANDI Archive and obtain the URL for streaming:
 
-   ```python
-   fs = fsspec.filesystem("http")
-   ```
+```python
+with DandiAPIClient() as client:
+    asset = client.get_dandiset(dandiset_id, "draft").get_asset_by_path(filepath)
+    s3_url = asset.get_content_url(follow_redirects=1, strip_query=True)
+```
 
-6. **Set Up Caching (Optional)**
-   You can create a caching filesystem to save downloaded data to disk. This step is optional but can improve efficiency:
+### Step 5: Set Up the Virtual Filesystem
 
-   ```python
-   fs = CachingFileSystem(
-       fs=fs,
-       cache_storage="nwb-cache",  # Specify a local folder for the cache
-   )
-   ```
+Create a virtual filesystem using `fsspec` to stream the data. Optionally, set up a cache to save downloaded data, which can speed up repeated access:
 
-7. **Open the NWB File**
-   Use the `h5py` library to open the NWB file through the virtual filesystem:
+```python
+# Setup the filesystem
+fs = fsspec.filesystem("http")
 
-   ```python
-   file = h5py.File(fs.open(s3_url, "rb"))
-   io = NWBHDF5IO(file=file, load_namespaces=True)
-   ```
+# Optional: Use CachingFileSystem for efficiency
+fs = CachingFileSystem(
+    fs=fs,
+    cache_storage="nwb-cache",  # Local folder for the cache
+)
+```
 
-8. **Load Data into pynapple**
-   You can now stream data directly into pynapple using the `NWBFile` class:
+### Step 6: Open the NWB File
 
-   ```python
-   nwb = nap.NWBFile(io.read())
-   ```
+Use `h5py` to open the file, which will allow you to later read it using pynwb:
 
-9. **Accessing Data**
-   After loading the NWB file, you can access various data types. For example, to access spike timings or position data:
+```python
+file = h5py.File(fs.open(s3_url, "rb"))
+io = NWBHDF5IO(file=file, load_namespaces=True)
+```
 
-   ```python
-   spikes = nwb["units"]  # Get spike timings
-   position = nwb["position"]  # Get tracked position data
-   ```
+### Step 7: Load the Data into pynapple
 
-10. **Data Processing and Analysis**
-    You can now process and analyze the streamed data in real-time using pynapple's functionalities, such as plotting, computing tuning curves, and more.
+Stream the NWB data directly into pynapple for analysis:
 
-## Conclusion
-By following these steps, you can stream data directly from the DANDI Archive into pynapple, enabling efficient real-time data analysis. This approach is particularly useful for working with large datasets that may not fit entirely into memory. Happy analyzing!
+```python
+nwb = nap.NWBFile(io.read())
+
+# View the contents of the NWB file
+print(nwb)
+```
+
+### Step 8: Access Specific Data within the File
+
+With the NWB file loaded, you can access various datasets, such as spike times and position data:
+
+```python
+units = nwb["units"]
+position = nwb["SpatialSeriesLED1"]
+
+# Further analysis, such as computing tuning curves, can be done directly
+tc, binsxy = nap.compute_2d_tuning_curves(units, position, 20)
+```
+
+### Step 9: Visualize or Analyze the Data
+
+Use visualizations or perform additional analyses using pynapple's functionalities:
+
+```python
+plt.figure(figsize=(15, 7))
+for i in tc.keys():
+    plt.subplot(2, 4, i + 1)
+    plt.imshow(tc[i], origin="lower", aspect="auto")
+    plt.title("Unit {}".format(i))
+plt.tight_layout()
+plt.show()
+```
+
+### Conclusion
+
+By following these steps, you can stream data directly from the DANDI Archive into pynapple, allowing for efficient real-time data analysis. This approach is powerful for examining neurophysiological datasets without the overhead of downloading large files to local storage.

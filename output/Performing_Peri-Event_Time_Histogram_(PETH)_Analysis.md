@@ -1,93 +1,66 @@
-# Performing Peri-Event Time Histogram (PETH) Analysis
+Sure! Here's a step-by-step guide on performing Peri-Event Time Histogram (PETH) analysis using `pynapple`.
 
-## Overview
-The Peri-Event Time Histogram (PETH) is an important tool in neuroscience for analyzing the relationship between stimuli and neural activity by aligning neural spikes with specific events (e.g., stimuli onset). This guide explains how to perform PETH analysis using the `pynapple` package.
+### Performing Peri-Event Time Histogram (PETH) Analysis
 
-## Steps
+#### Introduction
+Peri-Event Time Histogram (PETH) analysis is a method to align a variable of interest (like neural activity) to the occurrence of specific events (such as stimuli) to understand their relationship. This can help in examining the patterns of neural activity in response to stimuli.
 
-### 1. Set Up Your Environment
-First, ensure that you have the necessary libraries installed. You can do this via pip:
+#### Prerequisites
+Before beginning, ensure that you have the `pynapple` library installed and your data loaded. Your dataset should include both the neural activity time series and the timestamps of events you are interested in.
 
-```bash
-pip install pynapple matplotlib seaborn
-```
+#### Steps
 
-### 2. Load Your Data
-Start by loading your neural spike data and the events you want to align with. For this example, we'll use a hypothetical dataset:
+1. **Loading Your Data**: 
+   First, load your neural activity and event timestamps using `pynapple`. The neural data should be in one of the `pynapple` time series formats (like `Ts`, `Tsd`, `TsdFrame`).
 
 ```python
 import pynapple as nap
 
-# Load your data (e.g., from an NWB file)
-data = nap.load_file("your_data_file.nwb") # Adjust the filename accordingly
-
-# For this example, assume we have spike data in 'units' and events in 'encoding_table'
-spikes = data["units"]
-encoding_table = data["encoding_table"]
+# Load your data
+neural_data = nap.Tsd(...)  # Load or define your neural data time series
+event_times = nap.Ts(...)   # Load or define your event timestamps
 ```
 
-### 3. Extract Event Times
-Identify the specific events you want to align with. For example, if you're interested in boundary events:
+2. **Select Event of Interest**:
+   Determine the specific event timestamps you want to analyze with respect to the neural data. This might include filtering or restricting specific types of events.
 
 ```python
-# Extract timings and categories of events
-stimCategory = np.array(encoding_table.stimCategory)
-boundary_times = np.array(encoding_table.boundary1_time)
+# Assuming you have different types of events, filter for the specific type(s)
+selected_events = event_times.restrict(...) # Use IntervalSet or other filtering as necessary
 ```
 
-### 4. Create Event Arrays
-Create arrays for the specific event types you want to analyze:
+3. **Compute PETH**:
+   Use the `compute_perievent` function from `pynapple` to calculate the PETH. The `minmax` parameter defines the time window around each event to consider.
 
 ```python
-# Get indices for specific conditions, e.g., "No boundary" (NB) and "Hard boundary" (HB)
-indxNB = np.where(stimCategory == 0)
-indxHB = np.where(stimCategory == 2)
-
-# Extract corresponding boundary times for each condition
-NB_times = nap.Ts(boundary_times[indxNB])  # For No boundary events
-HB_times = nap.Ts(boundary_times[indxHB])  # For Hard boundary events
+# Calculate the PETH using a window of -0.1 to 0.2 seconds around each event
+peth = nap.compute_perievent(neural_data, selected_events, minmax=(-0.1, 0.2))
 ```
 
-### 5. Compute the PETH
-Use the `compute_perievent` function to align the spikes to your events. Adjust the `minmax` parameter to define a time window around the events of interest:
-
-```python
-# Compute PETH for No Boundary events
-NB_peth = nap.compute_perievent(spikes[0], NB_times, minmax=(-0.5, 1))  # Adjust for the first neuron
-
-# Compute PETH for Hard Boundary events
-HB_peth = nap.compute_perievent(spikes[0], HB_times, minmax=(-0.5, 1))  # Adjust for the same neuron or any as required
-```
-
-### 6. Plot the PETH
-Visualize the PETH to analyze the relationship between the events and neural activity:
+4. **Visualize the PETH**:
+   Visualize the resulting PETH data, often as a raster plot or histogram, to analyze the pattern of neural activity around the event times.
 
 ```python
 import matplotlib.pyplot as plt
 
-plt.figure(figsize=(12, 6))
-
-# Plot PETH for No Boundary events
+# Plotting the PETH
+plt.figure(figsize=(10, 6))
 plt.subplot(211)
-for i, n in enumerate(NB_peth):
-    plt.plot(NB_peth[n].fillna(i), "o", color='green', markersize=3)  # Plot individual trials
-plt.axvline(0, linewidth=2, color="black", linestyle="--")  # Event line
-plt.title("PETH for No Boundary Events")
-plt.xlabel("Time from NB (s)")
-plt.ylabel("Trial Number")
-
-# Plot PETH for Hard Boundary events
+plt.plot(nap.sum(peth.count(0.01), 1), linewidth=3, color="red")
+plt.xlim(-0.1, 0.2)
+plt.ylabel("Count")
+plt.axvline(0.0)
 plt.subplot(212)
-for i, n in enumerate(HB_peth):
-    plt.plot(HB_peth[n].fillna(i), "o", color='red', markersize=3)  # Plot individual trials
-plt.axvline(0, linewidth=2, color="black", linestyle="--")  # Event line
-plt.title("PETH for Hard Boundary Events")
-plt.xlabel("Time from HB (s)")
-plt.ylabel("Trial Number")
-
-plt.tight_layout()
+plt.plot(peth.to_tsd(), "|", markersize=20, color="red", mew=4)
+plt.xlabel("Time from event (s)")
+plt.ylabel("Event")
+plt.xlim(-0.1, 0.2)
+plt.axvline(0.0)
 plt.show()
 ```
 
-### Conclusion
-By following these steps, you can effectively analyze the relationship between stimuli and neural activity using PETH. The ability to visualize and interpret how neural activity changes in relation to specific events can provide valuable insights into neural coding and behavior. Adjust the parameters as necessary to tailor the analysis to your specific dataset and experimental design.
+5. **Interpret Results**:
+   Analyze the graphs to interpret the relationship between the events and neural activity. Peaks or consistent patterns might indicate a response to the event.
+
+#### Conclusion
+PETH analysis with `pynapple` allows you to explore how neural activity correlates with specific events, providing insights into stimulus-response relationships. Customize your analysis further by varying the window size and selecting additional time series data as necessary.

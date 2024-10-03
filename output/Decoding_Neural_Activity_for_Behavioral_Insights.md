@@ -1,98 +1,95 @@
-## Decoding Neural Activity for Behavioral Insights
+Certainly! Here's a step-by-step guide on how to decode neural activity to infer behavioral insights using the `pynapple` package:
+
+## How-to guide: Decoding Neural Activity for Behavioral Insights
 
 ### Introduction
-Decoding neural activity is a critical step in understanding how brain activity correlates with behavioral states or stimuli presence. In this guide, we will explore techniques using the `pynapple` package to infer behavioral patterns from neural data.
+
+Decoding neural activity involves interpreting the firing patterns of neurons to infer behavioral states or the presence of stimuli. Using the `pynapple` package, you can efficiently decode neural signals and gain insights into the underlying behavior.
 
 ### Prerequisites
-Before you begin, ensure that you have installed `pynapple` and other necessary libraries. You can do this using pip:
 
-```bash
-pip install pynapple matplotlib seaborn
-```
+- Ensure you have `pynapple` installed in your Python environment. If not, you can install it using:
+  ```bash
+  pip install pynapple
+  ```
 
-### Steps to Decode Neural Activity
+- Import necessary libraries:
+  ```python
+  import numpy as np
+  import pandas as pd
+  import pynapple as nap
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  ```
 
-#### 1. **Load Your Neural Data**
-First, you need to load your neural data. This can be done from a file such as a NWB file. For demonstration purposes, let's assume you have already downloaded a dataset.
+### Step-by-Step Guide
 
-```python
-import pynapple as nap
+#### Step 1: Load Your Data
 
-# Load your NWB file
-data = nap.load_file("path_to_your_data.nwb")
-```
-
-#### 2. **Extract Neural Spike Times**
-Extract spike times from your neural dataset and organize them into a `TsGroup`, which facilitates the grouping of different neurons.
-
-```python
-# Extract units which hold spike times
-spikes = data["units"]  # or any appropriate key based on your dataset
-```
-
-#### 3. **Get Behavioral Data**
-You will also need corresponding behavioral data, such as movement trajectories or stimulus presentations. This is crucial for decoding purposes.
+Typically, you'll be working with NWB files or similar structured datasets. Here's an example of loading data from an NWB file:
 
 ```python
-# Extract behavioral information
-behavioral_data = data["behavioral_variable"]  # Replace with actual key
+# Load the NWB file using pynapple
+nwb_file_path = "path/to/your/data.nwb"
+data = nap.load_file(nwb_file_path)
 ```
 
-#### 4. **Define Relevant Epochs**
-Define the epochs over which you'll be decoding, such as periods of active behavior or specific sessions of stimuli presentations.
+#### Step 2: Extract Neural Signals and Behavioral Data
+
+Once you have the data loaded, extract the neural activity and any related behavioral features, such as positions or events that represent stimuli.
 
 ```python
-# Define your intervals, e.g., during which the behavior of interest occurs
-active_behavioral_epoch = nap.IntervalSet(start_time, end_time)  # Replace with actual times
+# Extract spike timings from units
+spikes = data['units']
+
+# Extract a behavioral feature, such as head-direction
+behavioral_feature = data['head_direction']  # Example feature
 ```
 
-#### 5. **Compute Tuning Curves**
-Using the `compute_1d_tuning_curves` function, compute the tuning curves of the neural data against behavioral variables. This helps in establishing how neural firing correlates with variances in behavior.
+#### Step 3: Compute Tuning Curves
+
+To decode neural activity, first compute the tuning curves which represent neural firing rates as a function of the behavioral feature.
 
 ```python
 tuning_curves = nap.compute_1d_tuning_curves(
-    group=spikes,  
-    feature=behavioral_data,  
-    nb_bins=61,  
-    ep=active_behavioral_epoch,  
-    minmax=(0, max_behavioral_value)  # Adjust according to your data
+    group=spikes,
+    feature=behavioral_feature,
+    nb_bins=60,
+    minmax=(0, 2 * np.pi)  # Example range for angles in radians
 )
 ```
 
-#### 6. **Decoding Neural Activity**
-Once you have the tuning curves, you can decode behavioral states using the `decode_1d` function provided by `pynapple`. This will allow you to infer the state of the behavior based on the population activity of the neurons.
+#### Step 4: Perform Decoding
+
+Use the computed tuning curves to decode the behavioral state from the neural signals.
 
 ```python
-decoded_behavior, proba_feature = nap.decode_1d(
+decoded, proba_feature = nap.decode_1d(
     tuning_curves=tuning_curves,
     group=spikes,
-    ep=active_behavioral_epoch,  
-    bin_size=0.1,  # Adjust based on your requirements
-    feature=behavioral_data,
+    ep=data['epochs']['active'],
+    bin_size=0.1,  # seconds
+    feature=behavioral_feature  # This is optional, for comparison with true data
 )
 ```
 
-#### 7. **Visualize Results**
-Visualize the results to better understand the relationship between neural activity and behavior. You can plot the decoded states against actual behavioral data to derive insights.
+#### Step 5: Visualize the Results
+
+Plot the actual and decoded behavioral states to assess decoding accuracy.
 
 ```python
-import matplotlib.pyplot as plt
-
-plt.figure(figsize=(15, 5))
-plt.plot(decoded_behavior, label='Decoded Behavior')
-plt.plot(behavioral_data, label='Actual Behavior', alpha=0.5)
-plt.xlabel("Time (s)")
-plt.ylabel("Behavior Value")
-plt.title("Decoding Neural Activity for Behavioral Insights")
+plt.figure(figsize=(12, 6))
+plt.plot(decoded.as_units('s'), label='Decoded')
+plt.plot(behavioral_feature.as_units('s'), label='Actual', alpha=0.5)
+plt.xlabel('Time (s)')
+plt.ylabel('Behavioral Feature (e.g., direction)')
 plt.legend()
+plt.title('Decoded vs. Actual Behavioral States')
 plt.show()
 ```
 
 ### Conclusion
-By following these steps, you can effectively decode neural activity and relate it to behavioral insights using the `pynapple` package. This approach can be adapted for various datasets and behavioral contexts, providing valuable insights into the neural mechanisms underlying behavior.
 
-### Notes
-- Adjust parameters such as bin size and epoch duration based on the specifics of your dataset and analysis objectives.
-- Ensure to inspect the results and refine your analysis iteratively to enhance the robustness of your conclusions. 
+By following the above steps, you can decode neural signals to reveal underlying behavioral patterns using `pynapple`. This process can help infer behavioral states or the presence of stimuli based on neural activity patterns, thus providing deeper insights into neural-behavioral relationships.
 
-You can learn more about `pynapple` functions and capabilities in the [official documentation](https://pynapple-org.github.io/pynapple/).
+For further custom analyses, consider exploring other components of the `pynapple` package such as advanced processing, tuning curves, and more!

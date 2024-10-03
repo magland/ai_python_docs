@@ -1,103 +1,99 @@
-# How-to Guide: Using Wavelet Transforms to Analyze Signal Data with pynapple
+# Using Wavelet Transforms to Analyze Signal Data
 
-This tutorial will guide you through the process of performing continuous wavelet transforms using pynapple to capture changes in signal data over time. We will be working with the functionalities provided within the pynapple library to analyze Local Field Potential (LFP) data.
+This guide provides a tutorial on performing continuous wavelet transforms to capture changes in signal data over time using the `pynapple` library. We will explore how to generate a wavelet transform using `pynapple`, visualize the results, and interpret the outcomes. This can be particularly useful when analyzing neural signals, which often change and develop over time.
 
-## Prerequisites
+## Step-by-Step Tutorial
 
-Before you start, ensure you have the necessary libraries installed. You can install pynapple along with other required libraries using pip:
+### 1. Install Required Libraries
 
-```bash
-pip install matplotlib requests tqdm seaborn pynapple
+Ensure you have the required libraries installed. You will need `pynapple`, `matplotlib`, `numpy`, and `seaborn`. You can install them using pip:
+
+```sh
+pip install pynapple matplotlib numpy seaborn
 ```
 
-## Step-by-Step Instructions
+### 2. Import Libraries
 
-### 1. Import Required Libraries
-
-Start by importing the necessary libraries for your analysis.
+Import the necessary libraries in your script or Jupyter notebook:
 
 ```python
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pynapple as nap
-import requests
-import tqdm
-import math
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn
 ```
 
-### 2. Download Example Data
+### 3. Load or Generate Data
 
-For demonstration purposes, download a sample dataset that contains LFP data. This data can be obtained from a provided URL.
+You can load your signal data. For this tutorial, let's generate a dummy signal with a 2Hz component and an increasing frequency component:
 
 ```python
-path = "example_data.nwb"  # Replace with actual data path
-if path not in os.listdir("."):
-    r = requests.get(f"https://osf.io/2dfvp/download", stream=True)
-    block_size = 1024 * 1024
-    with open(path, "wb") as f:
-        for data in tqdm.tqdm(r.iter_content(block_size), unit="MB", unit_scale=True,
-                               total=math.ceil(int(r.headers.get("content-length", 0)) // block_size)):
-            f.write(data)
+Fs = 2000  # Sampling frequency
+t = np.linspace(0, 5, Fs * 5)
+
+# Generate components
+two_hz_phase = t * 2 * np.pi * 2
+two_hz_component = np.sin(two_hz_phase)
+increasing_freq_component = np.sin(t * (5 + t) * np.pi * 2)
+
+# Combine components with noise
+signal_data = nap.Tsd(
+    d=two_hz_component + increasing_freq_component + np.random.normal(0, 0.1, len(t)),
+    t=t,
+)
 ```
 
-### 3. Load the Data
+### 4. Generate Morlet Wavelet Filter Bank
 
-Load the data into your script using pynapple. This step allows you to access different components of the data such as the LFP signals.
+Define the frequencies you want for the wavelet transform and generate the filter bank:
 
 ```python
-data = nap.load_file(path)  # Load the NWB file
-eeg = data["eeg"]  # Extract the LFP data
+freqs = np.linspace(1, 25, num=25)
+filter_bank = nap.generate_morlet_filterbank(freqs, Fs, gaussian_width=1.5, window_length=1.0)
 ```
 
-### 4. Define the Time Interval for Analysis
+### 5. Perform Continuous Wavelet Transform
 
-Select a specific time interval of interest from the loaded data. This interval will be used for the wavelet transformation.
+Use the `compute_wavelet_transform` function to perform the wavelet transform on the signal data:
 
 ```python
-run_interval = nap.IntervalSet(start_time, end_time)  # define your interval of interest
-eeg_example = eeg.restrict(run_interval)[:, 0]  # Restrict LFP data to the selected interval
+mwt = nap.compute_wavelet_transform(signal_data, fs=Fs, freqs=freqs)
 ```
 
-### 5. Perform the Wavelet Transform
+### 6. Visualize the Results
 
-Define the frequency range for your wavelet transform. Then compute the wavelet transform on the LFP data.
-
-```python
-frequencies = np.geomspace(3, 250, 100)  # Define the frequency range for analysis
-mwt = nap.compute_wavelet_transform(eeg_example, fs=1250, freqs=frequencies)  # Compute wavelet transform
-```
-
-### 6. Visualize the Wavelet Decomposition
-
-After performing the wavelet transform, visualize the results using a spectrogram.
+Plot the wavelet transform to visualize how the signal's frequency components vary over time:
 
 ```python
-# Define plotting function
 def plot_timefrequency(freqs, powers, ax=None):
     im = ax.imshow(np.abs(powers), aspect="auto")
     ax.invert_yaxis()
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Frequency (Hz)")
     ax.get_xaxis().set_visible(False)
-    ax.set(yticks=np.arange(len(freqs))[::2], yticklabels=np.rint(freqs[::2]))
+    ax.set(yticks=np.arange(len(freqs))[::2], yticklabels=freqs[::2])
     ax.grid(False)
     return im
 
-# Creating the plot
-fig, ax = plt.subplots(figsize=(10, 6))
-plot_timefrequency(frequencies, np.transpose(np.abs(mwt)), ax=ax)
-plt.title("Wavelet Decomposition")
-plt.colorbar(label='Amplitude')
+# Create plot
+fig, ax = plt.subplots(1, constrained_layout=True, figsize=(10, 6))
+plot_timefrequency(freqs, np.transpose(mwt[:, :].values), ax=ax)
+plt.title("Wavelet Transform Scalogram")
+plt.xlabel("Time (s)")
+plt.ylabel("Frequency (Hz)")
 plt.show()
 ```
 
-### 7. Analyzing and Interpreting Results
+### 7. Interpret the Wavelet Transform
 
-The resulting plot will help you analyze how different frequency components change over time. Look for patterns or oscillations corresponding to specific frequencies that may indicate states of interest (e.g., theta rhythm during REM sleep).
+The wavelet transform provides a time-frequency analysis of the signal. You can observe changes in frequency content over time. Notice prominent frequencies and their duration.
+
+### 8. Further Analysis
+
+You may extract specific components, such as low or high-frequency oscillations, and reconstruct them from the wavelet transform. Analyze the modulation of specific frequencies over time or compute the signal's phase and amplitude at these frequencies.
 
 ### Conclusion
 
-You have successfully performed a continuous wavelet transform on signal data using pynapple and visualized the results. This method is useful for understanding how signals evolve over time and can be applied to various types of data in neuroscience and other fields.
+Wavelet transforms are powerful for analyzing non-stationary signals and capturing temporal changes in frequency content. This tutorial demonstrates using `pynapple` to perform continuous wavelet transforms, which are particularly useful for neuroscientific data and other bio-signals.
 
-For further exploration and specific details, refer to the [pynapple documentation](https://pynapple-org.github.io/pynapple/).
+Feel free to explore additional parameters and customize the analysis to fit your specific needs!

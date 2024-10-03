@@ -1,123 +1,84 @@
-# Extracting and Interpreting LFP Data from NWB Files
+How to Extract and Analyze Local Field Potential (LFP) Data from NWB Files Using Pynapple
 
-This guide demonstrates how to extract and analyze Local Field Potential (LFP) data from Neurodata Without Borders (NWB) recordings using the pynapple package.
+This guide provides a step-by-step approach to extracting and interpreting Local Field Potential (LFP) data from NWB files using the Pynapple library. Pynapple streamlines the process of handling neuroscience data formats and offers a range of functionalities for data analysis.
 
-## Step 1: Install Necessary Libraries
-Ensure you have the required packages installed:
+### Step 1: Import Necessary Libraries
+
+Ensure you have the necessary python libraries installed. You will need Pynapple as well as libraries for handling NWB files and plotting:
+
 ```bash
-pip install pynapple matplotlib seaborn requests tqdm
+pip install pynapple matplotlib seaborn
 ```
 
-## Step 2: Download the NWB Data File
-Start by downloading the NWB file containing the LFP data. For this example, we will use a sample file hosted on OSF.
+### Step 2: Load the NWB File
 
-```python
-import requests
-import os
-import tqdm
-import math
-
-# Specify the file path
-path = "Achilles_10252013_EEG.nwb"
-
-# Check if the file is already downloaded
-if path not in os.listdir("."):
-    url = "https://osf.io/2dfvp/download"
-    r = requests.get(url, stream=True)
-    block_size = 1024 * 1024
-    with open(path, "wb") as f:
-        for data in tqdm.tqdm(r.iter_content(block_size), unit="MB", unit_scale=True,
-                              total=math.ceil(int(r.headers.get("content-length", 0)) // block_size)):
-            f.write(data)
-```
-
-## Step 3: Load the NWB Data File
-Use the `nap.load_file()` function to open the NWB file.
+Start by loading your NWB file into a Pynapple `NWBFile` object. This allows you to navigate and interact with the dataset.
 
 ```python
 import pynapple as nap
 
-data = nap.load_file(path)  # Load the NWB file for this dataset
+# Load the NWB file
+nwb_file_path = 'path_to_your_file.nwb'
+data = nap.load_file(nwb_file_path)
+
+# Explore the dataset structure
 print(data)
 ```
 
-## Step 4: Extract the LFP Data
-Identify the LFP data within the dataset. Typically, this data is structured in a `RoiResponseSeries` or similar.
+### Step 3: Extract LFP Data
+
+Identify and extract the LFP signal of interest from the data structure:
 
 ```python
-eeg = data["eeg"]  # Extract LFP data
-print(eeg)
+# Fetch LFP data from the NWB file
+lfp_data = data['eeg']  # Replace 'eeg' with the actual key in your NWB file
+print(lfp_data)
 ```
 
-## Step 5: Define Relevant Analysis Epochs
-Determine the epochs of interest for your analysis, such as during specific behavioral events.
+### Step 4: Define Relevant Time Intervals
+
+Define epochs or time intervals that are relevant for your analysis. For example, you might be interested in an interval of REM sleep:
 
 ```python
-wake_ep = data["position"].time_support  # Define the wake epoch based on position data
+# Define time intervals of interest
+rem_epoch = nap.IntervalSet(start=begin_time, end=end_time)  # Use actual start and end times
 ```
 
-## Step 6: Restrict the Data to Specific Epochs
-Extract the segments of LFP data that are relevant for your analysis.
+### Step 5: Restrict LFP Data to Time Intervals
+
+Restrict your LFP data to the defined time intervals to focus analysis on specific periods:
 
 ```python
-# For example, restricting to a specific time frame of interest (adjust as needed)
-eeg_example = eeg.restrict(wake_ep)
+# Restrict data to REM epochs
+lfp_during_rem = lfp_data.restrict(rem_epoch)
 ```
 
-## Step 7: Visualize the LFP Activity
-Plot the LFP signal with respect to time to visualize the data.
+### Step 6: Analyze LFP Data
+
+Perform various analyses on the LFP data, such as computing the power spectral density (PSD) to identify predominant frequencies:
 
 ```python
+# Compute Power Spectral Density (PSD)
+frequency_sampling_rate = 1250  # Specify your sampling rate
+psd = nap.compute_power_spectral_density(lfp_during_rem, fs=frequency_sampling_rate)
+
+# Plot the PSD
 import matplotlib.pyplot as plt
 
-plt.figure(figsize=(10, 6))
-plt.plot(eeg_example)
-plt.title("LFP Activity Over Time")
-plt.xlabel("Time (s)")
-plt.ylabel("LFP Amplitude (a.u.)")
+plt.figure(figsize=(10, 4))
+plt.plot(psd.index, np.abs(psd.values))
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Power')
+plt.title('Power Spectral Density')
 plt.show()
 ```
 
-## Step 8: Compute the Power Spectral Density (PSD)
-Analyze the frequency content of the LFP signal using the function `nap.compute_power_spectral_density()`.
+### Step 7: Interpretation
 
-```python
-power = nap.compute_power_spectral_density(eeg_example, fs=1250, norm=True)
-print(power)
+Visualize and interpret the results. Dominant peaks in the PSD may reveal oscillatory phenomena such as theta waves in hippocampal recordings.
 
-# To plot the power spectral density
-plt.figure(figsize=(10, 6))
-plt.plot(power)
-plt.title("Power Spectral Density of LFP")
-plt.xlabel("Frequency (Hz)")
-plt.ylabel("Power")
-plt.xlim(0, 100)  # Adjust x-limits as needed
-plt.show()
-```
+### Additional Analysis
 
-## Step 9: Wavelet Decomposition
-Use wavelet decomposition to analyze how the frequency characteristics of the LFP change over time.
+Pynapple allows further LFP analysis, such as filtering specific frequency bands or computing wavelet transforms. The analysis can highlight neural rhythms associated with different behavioral or cognitive states.
 
-```python
-freqs = np.geomspace(3, 250, 100)  # Define frequency range
-mwt = nap.compute_wavelet_transform(eeg_example, fs=1250, freqs=freqs)
-
-# Plot the wavelet decomposition
-plt.figure(figsize=(10, 6))
-plt.pcolormesh(mwt.t, freqs, np.abs(mwt.values), shading='auto')
-plt.yscale('log')
-plt.title("Wavelet Decomposition of LFP")
-plt.xlabel("Time (s)")
-plt.ylabel("Frequency (Hz)")
-plt.colorbar(label="Amplitude")
-plt.show()
-```
-
-## Step 10: Interpretation of Results
-After extracting and analyzing the LFP data, interpret the observed patterns:
-
-1. Analyze the PSD to identify dominant frequencies during specific behaviors.
-2. Examine the wavelet decomposition to understand how frequency content varies over time.
-3. Consider relevant behavioral context (e.g., running vs. resting epochs) to correlate with neural activity patterns.
-
-This approach allows for thorough analysis and understanding of LFP data in the context of behavioral neuroscience using pynapple. Adjust parameters and analysis methods based on your specific research needs.
+By following these steps, you can efficiently extract and analyze LFP data from NWB recordings using the powerful and flexible tools provided by the Pynapple library.

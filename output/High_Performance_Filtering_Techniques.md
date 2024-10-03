@@ -1,104 +1,113 @@
 # High Performance Filtering Techniques: Comparing Butterworth and Windowed-Sinc Filters
 
-In this guide, we will compare the performance and precision of two common filtering techniques: the Butterworth filter and the Windowed-sinc filter. These techniques are vital for manipulating frequency characteristics in large datasets.
+In this guide, we'll explore how to use Pynapple to compare Butterworth and Windowed-sinc filters in terms of performance and precision, especially when applied to large datasets. This is critical when working with time series data where efficient and precise filtering is required.
 
 ## Overview
 
-This guide will demonstrate:
+The Pynapple filtering module provides two main methods for frequency manipulation:
+- **Butterworth Filter**: A type of recursive filter known for its smooth frequency response.
+- **Windowed-Sinc Filter**: A non-recursive filter using a windowed-sinc function, offering precise control over the transition bandwidth.
 
-1. How to generate a test signal.
-2. How to apply Butterworth and Windowed-sinc filters to the signal.
-3. How to benchmark the performance of each filter type.
-4. How to visualize and interpret the output.
+## Steps to Compare Filters
 
-## Step-by-Step Instructions
+### 1. Preparation
 
-### 1. Import Necessary Libraries
+Before you begin, ensure you have Pynapple and other necessary libraries installed. You can do this via:
 
-Make sure to include the required libraries before starting the filtering.
+```bash
+pip install pynapple matplotlib numpy
+```
+
+### 2. Generate Sample Data
+
+You can start by generating a multi-frequency signal to test the filtering methods:
 
 ```python
 import numpy as np
 import pynapple as nap
 import matplotlib.pyplot as plt
-from time import perf_counter
-```
 
-### 2. Generate Sample Data
-
-Create a sample signal with known frequency components. This allows us to visualize how well each filtering method retains or removes certain frequencies.
-
-```python
 fs = 1000  # Sampling frequency
 t = np.linspace(0, 2, fs * 2)
-f2 = np.cos(t * 2 * np.pi * 2)  # 2 Hz component
-f10 = np.cos(t * 2 * np.pi * 10)  # 10 Hz component
-f50 = np.cos(t * 2 * np.pi * 50)  # 50 Hz component
-
-# Combine components to create a signal
-sig = f2 + f10 + f50 + np.random.normal(0, 0.5, len(t))
+f2 = np.cos(t * 2 * np.pi * 2)
+f10 = np.cos(t * 2 * np.pi * 10)
+f50 = np.cos(t * 2 * np.pi * 50)
+sig = nap.Tsd(t=t, d=f2 + f10 + f50 + np.random.normal(0, 0.5, len(t)))
 ```
 
 ### 3. Apply Filters
 
-We will apply both Butterworth and Windowed-sinc filters to the same signal, thereby comparing their outputs.
+#### Butterworth Filter
+
+Apply a Butterworth filter with a defined passband:
 
 ```python
-# Bandpass filter using Butterworth
-filtered_butter = nap.apply_bandpass_filter(sig, (8, 12), fs, mode='butter')
-
-# Bandpass filter using Windowed-sinc
-filtered_sinc = nap.apply_bandpass_filter(sig, (8, 12), fs, mode='sinc', transition_bandwidth=0.003)
+sig_butter = nap.apply_bandpass_filter(sig, (8, 12), fs, mode='butter')
 ```
 
-### 4. Plotting Comparison of Filters
+#### Windowed-Sinc Filter
 
-Visualize the original and filtered signals to inspect the performance:
+Similarly, apply a Windowed-sinc filter:
 
 ```python
-plt.figure(figsize=(15, 5))
+sig_sinc = nap.apply_bandpass_filter(sig, (8, 12), fs, mode='sinc', transition_bandwidth=0.003)
+```
+
+### 4. Plot Results
+
+Visualize the results to compare the precision of both filters:
+
+```python
+fig = plt.figure(figsize=(10, 5))
 plt.subplot(211)
-plt.plot(t, sig, label="Original Signal")
-plt.plot(t, filtered_butter, label="Butterworth Filtered", linewidth=2)
-plt.title("Butterworth Filter")
-plt.xlabel("Time (s)")
-plt.ylabel("Amplitude")
+plt.plot(t, f10, '-', color='gray', label="10 Hz component")
+plt.xlim(0, 1)
 plt.legend()
-
 plt.subplot(212)
-plt.plot(t, sig, label="Original Signal")
-plt.plot(t, filtered_sinc, label="Windowed-Sinc Filtered", linestyle='--', linewidth=2)
-plt.title("Windowed-Sinc Filter")
-plt.xlabel("Time (s)")
-plt.ylabel("Amplitude")
+plt.plot(sig_butter, label="Butterworth")
+plt.plot(sig_sinc, '--', label="Windowed-sinc")
 plt.legend()
-
-plt.tight_layout()
+plt.xlabel("Time (s)")
+plt.xlim(0, 1)
 plt.show()
 ```
 
-### 5. Benchmarking Performance
+### 5. Performance Assessment
 
-To evaluate the performance of both filters, you can define functions that measure the execution time for a number of trials.
+To assess the performance, especially for large datasets, you can profile the time taken by each filtering method:
+
+#### Define a Function for Benchmarking
 
 ```python
-def get_mean_perf(signal, mode, n=10):
-    tmp = np.zeros(n)
-    for i in range(n):
-        t1 = perf_counter()
-        _ = nap.apply_lowpass_filter(signal, 0.25 * signal.rate, mode=mode)
-        t2 = perf_counter()
-        tmp[i] = t2 - t1
-    return [np.mean(tmp), np.std(tmp)]
+from time import perf_counter
 
-# Performance benchmarking for both filters
-times_butter = get_mean_perf(sig, mode='butter')
-times_sinc = get_mean_perf(sig, mode='sinc')
-
-print(f"Butterworth Average Time: {times_butter[0]} ± {times_butter[1]}")
-print(f"Windowed-Sinc Average Time: {times_sinc[0]} ± {times_sinc[1]}")
+def get_mean_perf(tsd, mode, n=10):
+    times = []
+    for _ in range(n):
+        start = perf_counter()
+        filtered = nap.apply_lowpass_filter(tsd, 0.25 * fs, mode=mode)
+        end = perf_counter()
+        times.append(end - start)
+    return np.mean(times), np.std(times)
 ```
 
-### Conclusion
+#### Run Benchmark
 
-Through this guide, you've learned how to implement high-performance filtering techniques using Butterworth and Windowed-sinc filters. By testing frequency retention, precision, and performance on large datasets, you can make informed decisions about which filtering approach to use in your analyses.
+Test with increasing sizes of data points and report the performance:
+
+```python
+sizes = [1000, 20000, 50000, 100000]
+butter_times = [get_mean_perf(nap.Tsd(t=np.linspace(0, size/fs, size), d=np.random.rand(size)), 'butter') for size in sizes]
+sinc_times = [get_mean_perf(nap.Tsd(t=np.linspace(0, size/fs, size), d=np.random.rand(size)), 'sinc') for size in sizes]
+
+print("Butterworth times:", butter_times)
+print("Windowed-sinc times:", sinc_times)
+```
+
+### 6. Analyze Results
+
+From the above benchmarks, you can analyze:
+- **Precision**: Compare plots to see which filter more accurately retains the desired frequency components.
+- **Performance**: Time taken for each filtering process at various data sizes to assess computational efficiency.
+
+By following this guide, you'll be able to perform an informed comparison between the Butterworth and Windowed-sinc filters, allowing you to select the best technique based on your performance and precision requirements for large datasets.

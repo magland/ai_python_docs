@@ -1,89 +1,85 @@
-# How-To Guide: Creating Tuning Curves from Neural Data
+Creating tuning curves from neural data is a standard practice in neuroscience to understand how neurons respond to specific features of stimuli, such as spatial position or head direction. Below is a step-by-step guide using the `pynapple` package to generate and analyze tuning curves from neural activity datasets.
 
-This guide will walk you through the process of generating and analyzing tuning curves from neural activity datasets using the `pynapple` package. Follow these step-by-step instructions to visualize how neural activity relates to various stimuli or behavioral variables.
+### Step-by-Step Instructions
 
-## Step 1: Import Necessary Libraries
+#### Step 1: Set Up Your Environment
 
-First, import the libraries you will be using for your analysis.
+Ensure you have Python installed, along with the required packages, including `pynapple`, `numpy`, and any other necessary libraries. You can install `pynapple` and commonly used libraries by executing:
+
+```bash
+pip install pynapple numpy matplotlib seaborn
+```
+
+#### Step 2: Organize Your Data
+
+Have your neural data organized, preferably in NWB (Neurodata Without Borders) format for compatibility with `pynapple`. Your dataset should include:
+
+- Neural activity data (`spikes`, `transients`, etc.)
+- Relevant behavioral or stimulus data (`position`, `head direction`, etc.)
+
+#### Step 3: Load Your Data
+
+Load your data using the `pynapple` library. If you're using an NWB file, you can open it directly with `nap.NWBFile`.
 
 ```python
-import numpy as np
 import pynapple as nap
-import matplotlib.pyplot as plt
-import seaborn as sns
+
+# Load NWB file
+data = nap.load_file('path_to_your_datafile.nwb')
 ```
 
-## Step 2: Load Neural Data
+#### Step 4: Preprocess Your Data
 
-Load your dataset, which can be in the form of neural spike data stored in a `NWB` file or any other compatible format. Here, we assume you have a `NWB` file.
+Extract the relevant neural activity and feature data. For example, to extract spike data and head direction:
 
 ```python
-data = nap.load_file("path/to/your/datafile.nwb")  # Load the NWB file
+spikes = data['units']  # Extract spike data
+angle = data['ry']  # Extract head direction data
 ```
 
-## Step 3: Extract Relevant Variables
+#### Step 5: Compute Tuning Curves
 
-Extract the spike times and the relevant behavioral variable (e.g., position, head direction). Here's how you might get spike data and a behavior variable from your dataset:
+Compute tuning curves for your neural data against a relevant feature (e.g., head direction, position). Use the `compute_1d_tuning_curves` for 1D features or `compute_2d_tuning_curves` for 2D features.
 
-```python
-spikes = data["units"]  # Extract the spike timings
-behavior_variable = data["ry"]  # Extract the behavioral variable, e.g., head direction
-```
-
-## Step 4: Select Epochs for Analysis
-
-Identify the relevant time intervals during which your analysis will take place. You can define specific epochs of interest, such as periods when the animal is running or exploring.
+For head-direction tuning curves:
 
 ```python
-epochs_of_interest = data["running_epoch"]  # Define the epochs of interest
-```
-
-## Step 5: Compute Tuning Curves
-
-Use the `compute_1d_tuning_curves` function to calculate the tuning curves for each neuron. This function requires your spike data, the behavior variable, and the specified epochs.
-
-```python
+# 1D Tuning Curve based on head direction
 tuning_curves = nap.compute_1d_tuning_curves(
-    group=spikes, 
-    feature=behavior_variable, 
-    nb_bins=61,  # Number of bins
-    ep=epochs_of_interest,  # Specify the epochs of interest
-    minmax=(0, 2 * np.pi)  # Specify minimum and maximum values for normalization
+    group=spikes,
+    feature=angle,
+    nb_bins=60,
+    minmax=(0, 2 * np.pi)
 )
 ```
 
-## Step 6: Analyze the Tuning Curves
+#### Step 6: Analyze Tuning Curves
 
-You can now analyze the tuning curves to identify patterns in neural activity. You may want to plot the tuning curves for individual neurons or calculate preferred angles, if applicable.
-
-### Plotting Tuning Curves
+Plot and analyze the tuning curves to interpret neuronal preferences for the feature being investigated.
 
 ```python
-plt.figure(figsize=(12, 6))
-for i in range(tuning_curves.shape[1]):  # Loop through the neurons
-    plt.subplot(4, 5, i + 1)
-    plt.plot(tuning_curves.iloc[:, i])  # Plot the tuning curve for neuron i
-    plt.title(f"Neuron {i + 1}")
-    plt.xlabel("Behavior variable (units)")
-    plt.ylabel("Firing Rate (Hz)")
-plt.tight_layout()
-plt.show()
+import matplotlib.pyplot as plt
+
+# Plot tuning curves
+for neuron_id, tuning_curve in tuning_curves.iteritems():
+    plt.figure()
+    plt.plot(tuning_curve)
+    plt.title(f'Neuron {neuron_id} Tuning Curve')
+    plt.xlabel('Angle (rad)')
+    plt.ylabel('Firing Rate (Hz)')
+    plt.show()
 ```
 
-### Preferred Angle Calculation
+#### Step 7: Advanced Analysis
 
-If applicable, you may want to calculate the preferred angle or condition information based on the tuning curves:
+For more in-depth analysis, you can:
 
-```python
-preferred_angles = tuning_curves.idxmax()  # Get preferred angle for each neuron
-```
+- Compare tuning curves across different epochs
+- Compute correlations between neuronal firing patterns and behavioral features
+- Use tuning curves to classify neuron types based on their response profiles
 
-## Step 7: Compare Across Conditions (Optional)
+#### Step 8: Document Your Findings
 
-If you have data from different conditions or epochs, you can repeat the above steps for each condition and compare the results. This might involve averaging tuning curves or calculating differences in preferred angles.
+Ensure you document your analysis and findings clearly. Include visual aids like plots to summarize the neural data response characteristics.
 
-## Conclusion
-
-Following these steps, you will be able to create, analyze, and visualize tuning curves from neural data using the `pynapple` package. This analysis helps uncover how neural activity corresponds to specific behavioral variables or stimuli.
-
-Feel free to modify any parameters or plots to suit the specifics of your dataset and analysis needs!
+By following these steps, you can effectively generate and analyze tuning curves, contributing valuable insights into neural processing and feature representation in the brain.

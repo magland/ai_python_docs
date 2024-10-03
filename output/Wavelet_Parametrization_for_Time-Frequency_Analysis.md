@@ -1,102 +1,90 @@
-# Wavelet Parametrization for Time-Frequency Analysis Guide
+Certainly! Below is a comprehensive guide on "Wavelet Parametrization for Time-Frequency Analysis" using the pynapple library, based on the provided documentation.
+
+---
+
+# How-to Guide: Wavelet Parametrization for Time-Frequency Analysis
+
+Wavelet transforms are a powerful tool in time-frequency analysis that can provide insights into how the spectral content of a signal changes over time. This guide will help you understand how the parameters of wavelets affect resolution and reconstruction fidelity.
 
 ## Overview
-This guide explains how to use wavelet analysis tools in the pynapple package, emphasizing the impact of various wavelet parameters on the temporal resolution and reconstruction fidelity of time-frequency analyses.
+Wavelets are functions that can be used to decompose signals into components of various frequencies, enabling detailed analyses of changes over time. In pynapple, wavelets are particularly useful for observing neural signals, which may change rapidly. Here, the common method employed is the Morlet wavelet, which is useful in neuroscientific data analysis for spectral decomposition.
 
-## Prerequisites
-Ensure you have the pynapple package and its dependencies installed. You can install it along with the required libraries as follows:
-```bash
-pip install matplotlib seaborn requests tqdm
-```
+## Key Parameters
+When performing a wavelet transform, several parameters significantly affect the analysis's outcome:
 
-## Step-by-Step Instructions
+- **`gaussian_width`**: Controls the width of the wavelet in the frequency domain. A larger `gaussian_width` results in better frequency resolution but poorer time resolution.
 
-### 1. Import Necessary Libraries
-Begin by importing all the necessary libraries:
+- **`window_length`**: Represents the length of the wavelet in seconds. A longer `window_length` will increase the accuracy in frequency resolution at the cost of time resolution.
+
+### Balancing Resolution and Reconstruction Fidelity
+Choosing wavelet parameters involves trade-offs between time resolution (how accurately we can localize events in time) and frequency resolution (how accurately we can resolve different frequency components).
+
+## Getting Started
+
+### Step 1: Generating the Filter Bank
+You can generate a Morlet wavelet filter bank using `nap.generate_morlet_filterbank`, which helps parametrize and visualize the wavelets:
+
 ```python
 import numpy as np
 import pynapple as nap
+
+# Define frequency range for analysis
+freqs = np.linspace(1, 25, num=25)
+
+# Get the filter bank with default parameters
+filter_bank = nap.generate_morlet_filterbank(
+    freqs, fs=1000, gaussian_width=1.5, window_length=1.0
+)
+```
+
+### Step 2: Examining Wavelet Effects
+By varying the `gaussian_width` and `window_length`, you can visualize how these parameters change the wavelet shape and impact analysis.
+
+```python
 import matplotlib.pyplot as plt
-import seaborn as sns
-import requests
-import os
-import tqdm
+
+# Visualize the effect of different wavelet parameters
+for window_length in [1.0, 2.0]:
+    for gaussian_width in [1.5, 4.0]:
+        wavelet = nap.generate_morlet_filterbank(
+            np.array([1.0]), 1000, gaussian_width=gaussian_width, window_length=window_length, precision=12
+        )[:, 0].real()
+        plt.plot(wavelet, label=f'WL={window_length}, GW={gaussian_width}')
+        plt.legend()
+        plt.title("Parametrization Visualization")
+        plt.xlabel("Time (s)")
+        plt.show()
 ```
 
-### 2. Download Sample Data
-For the purpose of this analysis, download an example dataset that contains LFP (local field potential) data. You can replace the URL with a valid data source if needed:
+### Step 3: Computing the Wavelet Transform
+Perform the wavelet transform using the chosen wavelet parameters:
+
 ```python
-path = "example_data.nwb"
-if path not in os.listdir("."):
-  r = requests.get("https://example.com/example_data.nwb", stream=True)
-  block_size = 1024 * 1024
-  with open(path, 'wb') as f:
-    for data in tqdm.tqdm(r.iter_content(block_size), unit='MB', unit_scale=True,
-                           total=math.ceil(int(r.headers.get('content-length', 0)) // block_size)):
-      f.write(data)
+# Example signal
+sig = nap.Tsd(t=np.linspace(0, 1, 1000), d=np.sin(2 * np.pi * 5 * np.linspace(0, 1, 1000)))
+
+# Compute wavelet transform
+mwt = nap.compute_wavelet_transform(
+    sig, fs=1000, freqs=freqs, gaussian_width=1.5, window_length=1.0, norm='l1'
+)
 ```
 
-### 3. Load the Data
-Load the downloaded NWB file to import your LFP data:
-```python
-data = nap.load_file(path)
-eeg = data["eeg"]  # Replace 'eeg' with the appropriate key for your LFP data
-```
+### Step 4: Visualization of Time-Frequency Representation
+Visualize the transformed signal to observe time-frequency patterns:
 
-### 4. Define Frequency Set for Wavelet Transformation
-To explore how parameters affect results, set a range of frequencies for the wavelet decomposition:
 ```python
-freqs = np.linspace(1, 250, num=100)  # Adjust frequency range as appropriate
-```
-
-### 5. Compute Wavelet Transform
-Perform the wavelet transform using the defined frequency set. Adjust the `gaussian_width` and `window_length` parameters to observe their effects:
-```python
-# Example with specific parameters
-mwt = nap.compute_wavelet_transform(eeg, fs=1250, freqs=freqs, gaussian_width=1.5, window_length=1.0)
-```
-
-### 6. Visualize the Results
-Plot the wavelet decomposition to visualize how the frequencies evolve over time:
-```python
-plt.figure(figsize=(10, 6))
-plt.imshow(np.abs(mwt), aspect='auto', extent=[eeg.t.min(), eeg.t.max(), freqs.min(), freqs.max()])
-plt.title("Wavelet Decomposition")
-plt.xlabel("Time (s)")
-plt.ylabel("Frequency (Hz)")
-plt.colorbar(label="Magnitude")
+def plot_timefrequency(freqs, powers, ax):
+    im = ax.imshow(np.abs(powers), aspect="auto", origin="lower")
+    ax.set_yticks(np.arange(len(freqs))[::2])
+    ax.set_yticklabels(np.rint(freqs[::2]))
+    ax.set_ylabel("Frequency (Hz)")
+    return im
+    
+fig, ax = plt.subplots()
+im = plot_timefrequency(freqs, np.transpose(mwt.values), ax=ax)
+plt.colorbar(im, ax=ax)
 plt.show()
 ```
 
-### 7. Experiment with Different Parameters
-Change the `gaussian_width` and `window_length` parameters and observe how they affect the wavelet transform:
-- Decreasing `gaussian_width` generally increases the time resolution.
-- Increasing `window_length` may offer better frequency resolution.
-```python
-# Example of changing parameters
-mwt_new = nap.compute_wavelet_transform(eeg, fs=1250, freqs=freqs, gaussian_width=3.0, window_length=2.0)
-```
-Visualize the new results similarly to step 6.
-
-### 8. Evaluate Reconstruction Fidelity
-To assess how well your reconstruction matches the original signal, sum the wavelet results and compare against the original LFP signal:
-```python
-reconstructed_signal = np.sum(mwt, axis=1)
-plt.figure()
-plt.plot(eeg, label='Original Signal')
-plt.plot(reconstructed_signal, label='Reconstructed Signal', alpha=0.7)
-plt.legend()
-plt.title("Signal Reconstruction Comparison")
-plt.xlabel("Time (s)")
-plt.ylabel("Amplitude")
-plt.show()
-```
-
-### 9. Analyze Transition Bands
-Inspect how the parameter settings affect transition bandwidths and the resulting frequency response. For example, compute and plot the frequency response for different wavelets.
-
-### Conclusion
-By varying the wavelet parameters, you can significantly impact the analysis resolution and reconstruction fidelity in temporal analyses. Learning how to optimally set these parameters is crucial for accurately interpreting wavelet transform results in your research.
-
-### References
-Consult the pynapple documentation for further technical details and advanced usage: [Pynapple Documentation](https://pynapple-org.github.io/pynapple/)
+## Conclusion
+Properly adjusting wavelet parameters like `gaussian_width` and `window_length` is crucial for achieving the desired balance between time and frequency resolution. This guide has illustrated the process of setting parameter values, performing a wavelet transform, and visually interpreting the results. Experimenting with these parameters will allow you to better analyze your specific signal characteristics in time-frequency space.

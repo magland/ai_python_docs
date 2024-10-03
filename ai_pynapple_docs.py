@@ -74,7 +74,7 @@ The description is: "{description}".
     ]
 
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-    gpt_model = "gpt-4o-mini"
+    gpt_model = "gpt-4o"
     if not OPENAI_API_KEY:
         raise Exception("OPENAI_API_KEY environment variable not set.")
     client = openai.Client(

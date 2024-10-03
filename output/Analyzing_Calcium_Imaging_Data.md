@@ -1,106 +1,91 @@
-# How-To Guide: Analyzing Calcium Imaging Data
+Certainly! Here's a step-by-step guide on analyzing calcium imaging data, with a focus on exploring methods for plotting activity and identifying head-direction cells using `pynapple`.
 
-## Introduction
-In this guide, we will explore methods for working with calcium imaging data using the `pynapple` library. Specifically, we will focus on plotting activity from calcium imaging recordings and identifying head-direction cells.
+### Step-by-step Guide: Analyzing Calcium Imaging Data
 
-## Prerequisites
-Before proceeding, ensure you have the required packages installed:
-
-```bash
-pip install matplotlib seaborn tqdm pynapple
-```
-
-## Step 1: Download the Data
-First, let’s download a sample dataset that contains calcium imaging recordings. 
-
-```python
-import os
-import requests
-import tqdm
-import math
-
-# Define the file path
-path = "A0670-221213.nwb"
-
-# Download the dataset
-if path not in os.listdir("."):
-    r = requests.get(f"https://osf.io/sbnaw/download", stream=True)
-    block_size = 1024 * 1024
-    with open(path, 'wb') as f:
-        for data in tqdm.tqdm(r.iter_content(block_size), unit='MB', unit_scale=True,
-                              total=math.ceil(int(r.headers.get('content-length', 0)) // block_size)):
-            f.write(data)
-```
-
-## Step 2: Load the Data
-Next, we will load the NWB file and extract the relevant RoiResponseSeries, which contains the calcium imaging data.
-
-```python
-import pynapple as nap
-
-# Load the NWB file
-data = nap.load_file(path)
-
-# Extract the RoiResponseSeries
-transients = data['RoiResponseSeries']
-print(transients)  # Check the shape and contents of the data
-```
-
-## Step 3: Plot Activity of a Neuron
-Now we can visualize the activity of a specific region of interest (ROI) in the calcium imaging data.
-
+#### Step 1: Import Necessary Libraries
+To begin with, make sure you have the required libraries installed and imported:
 ```python
 import matplotlib.pyplot as plt
+import pynapple as nap
+import seaborn as sns
+```
+You can install the necessary packages using:
+```bash
+pip install matplotlib seaborn pynapple
+```
 
-# Plot the activity for a specific neuron (e.g., ROI index 0)
+#### Step 2: Load the Calcium Imaging Data
+First, download the necessary NWB file or identify its path. Then, use `pynapple` to load the data.
+```python
+data = nap.load_file('path_to_your_data.nwb')
+print(data)
+```
+
+#### Step 3: Access the Transient (Calcium Activity) Data
+Extract the fluorescence data from regions of interest (ROI) stored in a `RoiResponseSeries`.
+```python
+transients = data['RoiResponseSeries']
+print(transients)
+```
+
+#### Step 4: Plot the Activity of a Single Neuron
+Select one neuron and visualize its activity over time to get an initial understanding.
+```python
 plt.figure(figsize=(6, 2))
 plt.plot(transients[0:2000, 0], linewidth=5)
 plt.xlabel("Time (s)")
 plt.ylabel("Fluorescence")
-plt.title("Calcium Imaging Activity of Neuron 0")
 plt.show()
 ```
 
-## Step 4: Extract Head-Direction Information
-To analyze head-direction cells, we need to extract the head-direction angle from the dataset.
-
+#### Step 5: Analyze Head-Direction Data
+Get the head-direction data from the dataset, which is often used to identify cells responsive to specific orientations.
 ```python
-# Extract the head-direction data
 angle = data['ry']
-print(angle)  # Check the contents of the head-direction data
+print(angle)
 ```
 
-## Step 5: Compute Tuning Curves
-Next, we will compute the head-direction tuning curves for the calcium imaging data. This will allow us to analyze how the fluorescence of the neurons relates to the animal's head direction.
-
+#### Step 6: Calculate Tuning Curves
+Compute the tuning curves, which reflect the relationship between neural activity and head-direction, using:
 ```python
-# Compute tuning curves for all neurons
 tcurves = nap.compute_1d_tuning_curves_continuous(transients, angle, nb_bins=120)
-
-print(tcurves)  # Check the tuning curves
+print(tcurves)
 ```
 
-## Step 6: Plot a Tuning Curve
-To visualize the head-direction preference of a specific neuron, we can plot its tuning curve.
-
+#### Step 7: Plot Tuning Curves
+Visualize the tuning curves of neurons to identify potential head-direction cells:
 ```python
-# Plot the tuning curve for neuron 4 (index 4)
-plt.figure(figsize=(8, 4))
+plt.figure()
 plt.plot(tcurves[4])
-plt.xlabel("Angle (radians)")
-plt.ylabel("Fluorescence (normalized)")
-plt.title("Head-Direction Tuning Curve for Neuron 4")
-plt.grid()
+plt.xlabel("Angle")
+plt.ylabel("Fluorescence")
 plt.show()
 ```
 
-## Step 7: Identify Head-Direction Cells
-To determine whether a neuron is a head-direction cell, we can analyze the shape of its tuning curve. A clear preference for certain angles suggests it is a head-direction cell.
-
+#### Step 8: Assess Stability by Splitting the Data
+To further confirm the identity of head-direction cells, split the recording into two halves and compute tuning curves for each half:
 ```python
-# Further analysis can be performed to quantify head-directionality, 
-# such as fitting the tuning curve to a model and calculating selectivity indices.
+center = transients.time_support.get_intervals_center()
+halves = nap.IntervalSet(
+    start=[transients.time_support.start[0], center.t[0]],
+    end=[center.t[0], transients.time_support.end[0]]
+)
+
+half1 = nap.compute_1d_tuning_curves_continuous(transients, angle, nb_bins=120, ep=halves.loc[[0]])
+half2 = nap.compute_1d_tuning_curves_continuous(transients, angle, nb_bins=120, ep=halves.loc[[1]])
+
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+plt.plot(half1[4])
+plt.title("First half")
+plt.xlabel("Angle")
+plt.ylabel("Fluorescence")
+
+plt.subplot(1, 2, 2)
+plt.plot(half2[4])
+plt.title("Second half")
+plt.show()
 ```
 
-## Conclusion
-By following these steps, you can effectively analyze calcium imaging data, visualize neuronal activity, and identify head-direction cells using the `pynapple` library. This guide serves as a foundational approach, and further analysis can be implemented to explore neuronal behavior and properties in greater depth.
+### Conclusion
+By following these steps, you can explore and analyze calcium imaging data to plot activity and identify head-direction cells. This approach gives you a good foundation for further analysis and insights from your experimental data.

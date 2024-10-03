@@ -10,8 +10,6 @@ A chatbot can use this in two passes. First it figures out which guide(s) it nee
 
 Whereas the full concatenated documentation for Pynapple is around 33k tokens, the individual guides are less than 1k tokens each.
 
-Note: gpt-4o was used to generate topics.json, but to save costs for these first passes, gpt-4o-mini was used to actually generate the content of the guides.
-
 ## Usage
 
 First, clone pynapple and set the PYNAPPLE_SRC_DIR environment variable to the path of the pynapple source directory.

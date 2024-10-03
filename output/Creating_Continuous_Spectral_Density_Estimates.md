@@ -1,51 +1,61 @@
-# How-to Guide: Creating Continuous Spectral Density Estimates
+To create continuous spectral density estimates using the `pynapple` library, follow these steps to compute power spectral densities (PSD) across different epochs for thorough analysis of signal characteristics. This guide assumes you have time series data such as Local Field Potentials (LFP) or other types of continuous signals.
 
-## Description:
-This guide will help you compute power spectral densities (PSD) across different epochs to thoroughly analyze the signal characteristics using the `pynapple` package. 
+### Prerequisites
 
-## Steps:
+1. Ensure you have `pynapple` installed along with its dependencies such as `numpy`, `matplotlib`, and `seaborn`.
+2. Import the necessary libraries:
+   ```python
+   import numpy as np
+   import pynapple as nap
+   import matplotlib.pyplot as plt
+   ```
 
-1. **Load Your Data**: First, ensure that you have your signal data in a `Tsd`, `TsdFrame`, or `TsGroup` format and that you have defined the epochs you are interested in analyzing.
+### Step-by-step Guide
 
-    ```python
-    import pynapple as nap
+1. **Load Your Data**
+   - Load your time series data. This could be from a file or generated within your script.
+   - For instance, load an NWB file or any compatible format:
+     ```python
+     data = nap.load_file('path_to_your_data.nwb')
+     signal = data['eeg']  # Extract EEG or appropriate signal
+     epochs = data['epochs']  # Load epochs, e.g., wake and sleep
+     ```
 
-    # Load your data (Example)
-    data = nap.load_file("your_data_file.nwb")  # Replace with your file
-    signal = data["desired_signal"]  # Change to your signal object
-    epochs = data["desired_epochs"]  # Change to your epoch object
-    ```
+2. **Define Epochs for Analysis**
+   - Determine the epochs over which you want to analyze the spectral properties. 
+   - You might have specific epochs like `wake`, `rest`, `run`, etc.
+   - Use these epochs to restrict your analysis:
+     ```python
+     wake_ep = epochs['wake']
+     rest_ep = epochs['rest']
+     ```
 
-2. **Select the Interval Size**: Determine the duration of epochs you wish to analyze. This is done by setting the `interval_size` parameter. This size defines how long each segment of data will be for the PSD computation.
+3. **Compute PSD for Each Epoch**
+   - Use `nap.compute_power_spectral_density` for large single epoch analysis.
+   - Use `nap.compute_mean_power_spectral_density` for multiple epochs of equal length to avoid boundary artifacts.
+   - Example of PSD calculation for a single large epoch:
+     ```python
+     fs = 1000  # Sampling frequency
+     psd_wake = nap.compute_power_spectral_density(signal, fs=fs, ep=wake_ep, norm=True)
+     psd_rest = nap.compute_power_spectral_density(signal, fs=fs, ep=rest_ep, norm=True)
+     ```
 
-3. **Compute Power Spectral Density**: Use the `nap.compute_mean_power_spectral_density` function to compute the spectral density estimates. Set the `ep` argument to the epochs you defined earlier and specify other necessary parameters like the sampling rate.
+4. **Visualize the Results**
+   - Visualize the PSDs using Matplotlib.
+   - Plot the PSD for each epoch to compare their spectral characteristics:
+     ```python
+     plt.figure(figsize=(10, 6))
+     plt.plot(psd_wake.index, np.abs(psd_wake), label='Wake')
+     plt.plot(psd_rest.index, np.abs(psd_rest), label='Rest')
+     plt.xlabel('Frequency (Hz)')
+     plt.ylabel('Amplitude')
+     plt.legend()
+     plt.title('Power Spectral Density')
+     plt.show()
+     ```
 
-    ```python
-    fs = 1250  # Sampling frequency, update based on your specific data
-    mean_psd = nap.compute_mean_power_spectral_density(
-        signal,
-        interval_size=1.5,  # Set your desired interval size
-        fs=fs,
-        ep=epochs,
-        norm=True  # To ensure the output is normalized
-    )
-    ```
+5. **Analyze the Spectral Characteristics**
+   - Use PSD plots to examine dominant frequencies and their strengths across epochs.
+   - Look for characteristic patterns such as theta waves during run epochs or ripple events during rest.
 
-4. **Analyze the Results**: The output will be a normalized power spectral density for each specified epoch. You can visualize the results or further analyze the data for your specific application.
-
-    ```python
-    import matplotlib.pyplot as plt
-    
-    # Plotting the resulting mean PSD
-    plt.figure(figsize=(10, 6))
-    plt.plot(mean_psd.index, mean_psd.values)
-    plt.xlabel("Frequency (Hz)")
-    plt.ylabel("Power Spectral Density")
-    plt.title("Mean Power Spectral Density Estimates")
-    plt.show()
-    ```
-
-5. **Iterate if Needed**: If you want to analyze different epochs or modify the intervals, repeat steps 2 to 4 with the new configuration to explore various characteristics of your signal.
-
-### Conclusion:
-By following the above steps, you can efficiently compute continuous spectral density estimates for your signal data across different epochs. This method will provide invaluable insights into the frequency characteristics of your signals, especially for time-varying phenomena.
+Using `pynapple`, you can efficiently compute and analyze continuous spectral density estimates across different epochs, providing insights into the spectral characteristics of your signals under varying conditions.

@@ -1,87 +1,89 @@
-# How-To Guide: NWB & Lazy-loading in Pynapple
+Certainly! Here's a how-to guide for "NWB & Lazy-loading in Pynapple":
 
-## Introduction
-In this guide, you will learn how to efficiently load and work with Neurodata Without Borders (NWB) files using Pynapple's lazy-loading features. This allows you to work with large datasets without requiring all data to be loaded into memory at once.
+---
 
-## Required Libraries
-Make sure you have the necessary packages installed. You can do this via pip:
+# How-to Guide: NWB & Lazy-loading in Pynapple
 
+Pynapple provides efficient handling and manipulation of NWB files via lazy-loading, which allows you to access large datasets without loading everything into memory at once. This guide will show you how to leverage these features effectively.
+
+## Prerequisites
+
+Make sure you have pynapple installed and ready to use. You'll also need h5py, which pynapple uses to work with NWB files. You can install these packages using pip:
 ```bash
-pip install pynapple dandi fsspec h5py
+pip install pynapple h5py
 ```
 
-## Step-by-Step Instructions
+## Step 1: Load a NWB File
 
-### Step 1: Import Libraries
-Start by importing the required libraries for loading NWB files:
+You can load a NWB file using `nap.NWBFile`. This class supports lazy-loading, meaning it will only load data into memory when you explicitly request it.
 
 ```python
-from pynwb import NWBHDF5IO
-from dandi.dandiapi import DandiAPIClient
-import fsspec
-from fsspec.implementations.cached import CachingFileSystem
-import h5py
 import pynapple as nap
+
+# Provide the path to your NWB file
+path = "path/to/your/file.nwb"
+
+# Initialize NWBFile with lazy loading
+data = nap.NWBFile(path, lazy_loading=True)
+
+print(data)
 ```
 
-### Step 2: Stream Data from DANDI
-You can stream NWB data directly from the DANDI Archive without having to download the entire dataset first.
+This step will parse the NWB file and prepare it for lazy loading. It won’t load the data into memory yet.
 
-1. Specify the dataset ID and path to the NWB file:
+## Step 2: Access Data Lazily
+
+When you access a dataset from the NWB file, pynapple will initially return an HDF5 dataset instead of loading it into memory. You can perform operations on this dataset without fully loading it.
 
 ```python
-dandiset_id, filepath = ("000582", "sub-10073/sub-10073_ses-17010302_behavior+ecephys.nwb")
+# Access a dataset, e.g., local field potential (LFP) data
+lfp_data = data['lfp']  # this is an example key, yours might differ
+
+# Check the type
+print(type(lfp_data.values))  # This will print something like h5py.Dataset
 ```
 
-2. Use the Dandi API Client to get the asset and create a filesystem for streaming:
+## Step 3: Load Specific Data Chunks
+
+To actually load data into memory, you can access specific chunks of the dataset. This is particularly useful for processing large datasets by sections.
 
 ```python
-with DandiAPIClient() as client:
-    asset = client.get_dandiset(dandiset_id, "draft").get_asset_by_path(filepath)
-    s3_url = asset.get_content_url(follow_redirects=1, strip_query=True)
+# Load a specific chunk from the LFP data
+chunk = lfp_data.get(0, 1000)  # Load the first 1000 samples
+
+print(chunk)
+print(type(chunk.values))  # This will print numpy.ndarray as it is loaded into memory now
 ```
 
-3. Establish a caching filesystem to save downloaded data locally:
+## Step 4: Use Pynapple Functions on Lazy-loaded Data
+
+Many pynapple functions support operations with lazy-loaded data. You can use these functions directly on your datasets without preloading all the data into memory.
 
 ```python
-fs = fsspec.filesystem("http")
-fs = CachingFileSystem(fs=fs, cache_storage="nwb-cache")
+import numpy as np
+
+# Compute tuning curves without preloading the entire session
+tc = nap.compute_1d_tuning_curves(data['units'], data['y'], 10)
+
+print(tc)
 ```
 
-### Step 3: Open the NWB File
-Open the NWB file using `h5py` and `NWBFile` from Pynapple:
+## Step 5: Disabling Lazy-loading
+
+If you prefer to load everything into memory from the start, set `lazy_loading=False` when initializing the NWBFile.
 
 ```python
-file = h5py.File(fs.open(s3_url, "rb"))
-io = NWBHDF5IO(file=file, load_namespaces=True)
+# Initialize NWBFile without lazy loading
+data = nap.NWBFile(path, lazy_loading=False)
+
+# Now accessing a dataset loads it into memory
+loaded_data = data['lfp']
+print(type(loaded_data.values))  # This will print numpy.ndarray, as it is now fully loaded
 ```
 
-### Step 4: Load NWB Data into Pynapple
-Once the NWB file is opened, you can start streaming specific data into Pynapple:
+## Additional Tips
 
-```python
-nwb = nap.NWBFile(io.read())
-```
+- Make sure your environment has sufficient memory when working with large datasets without lazy loading.
+- Use lazy-loading for efficient processing and analysis of large datasets, particularly when working in resource-constrained environments.
 
-### Step 5: Access and Explore the Data
-Once you have the NWB data loaded into Pynapple, you can access various datasets:
-
-```python
-spikes = nwb["units"]  # Access spike timings
-epochs = nwb["epochs"]  # Access behavioral epochs
-position = nwb["position"]  # Access position data
-```
-
-### Step 6: Perform Data Analysis
-You can now perform various types of analyses without loading the entire dataset into memory. Use functions like `nap.compute_power_spectral_density` or `nap.compute_mean_power_spectral_density` while restricting your analysis to specific epochs:
-
-```python
-power = nap.compute_mean_power_spectral_density(eeg, ep=wake_ep, fs=FS, norm=True)
-```
-
-### Additional Notes:
-- Keep in mind that while lazy loading is efficient for large datasets, careful code structuring is key to avoid out-of-memory errors.
-- Using `lazy_loading=False` when initializing the `NWBClass` can help if you want to load the dataset entirely, but this might lead to performance issues when dealing with large files.
-
-## Conclusion
-You have successfully set up lazy-loading for NWB files in Pynapple, enabling efficient data analysis without overwhelming system memory. This approach is particularly useful for handling large experimental datasets in neuroscience.
+This guide enables you to efficiently load and manipulate NWB files with the help of lazy-loading features in pynapple, optimizing both memory use and computation speed.

@@ -1,94 +1,64 @@
-# How-to Guide: Applying Phase Coupling Analysis to Neural Spikes
+Certainly! Phase coupling analysis is a powerful technique to explore the relationship between neural spikes and oscillatory phases. In this guide, we will use the Pynapple package to apply phase coupling analysis to neural spikes by filtering the LFP signal, extracting its phase using the Hilbert transform, and then analyzing the spike-phase coupling. Here’s a step-by-step guide:
 
-This guide outlines the steps for analyzing the relationship between neural spikes and oscillatory phase using Pynapple. The process involves band-pass filtering the neural signal, calculating the phase using Hilbert transforms, and then examining the phase preferences of spikes.
+### Step-by-Step Guide: Applying Phase Coupling Analysis to Neural Spikes
 
-## Prerequisites
-
-Ensure you have the following libraries installed:
-```bash
-pip install pynapple numpy matplotlib seaborn scipy
-```
-
-## Step-by-Step Process
-
-### 1. **Download and Load the Data**
-Begin by downloading your dataset, which typically contains both neural spikes (e.g., from a cortex or hippocampus) and an oscillatory signal (e.g., Local Field Potential, LFP).
+#### Step 1: Load your data
+First, you'll need LFP data and spike times data loaded into Pynapple objects (`Tsd` for time series data and `Ts` for timestamp data of spikes).
 
 ```python
 import pynapple as nap
-import requests
 
-# Download the data
-path = "your_data_file.nwb"
-if path not in os.listdir("."):
-    r = requests.get(f"https://osf.io/your_download_link/download", stream=True)
-    with open(path, 'wb') as f:
-        f.write(r.content)
-
-# Load the data
-data = nap.load_file(path)
+# Assuming you already have your data structured in pynapple compatible format
+lfp = nap.Tsd(t=<time_array>, d=<lfp_data>)   # Replace <time_array> and <lfp_data> with your actual data
+spikes = nap.Ts(t=<spike_times>)              # Replace <spike_times> with your actual spike times
 ```
 
-### 2. **Extract the Neural Spikes and Oscillatory Signal**
-Identify the neural spike data and the oscillatory signal you want to analyze (e.g., LFP).
+#### Step 2: Select Frequency Band for Phase Analysis
+Decide on the frequency band of interest. For example, you might be interested in the theta band (6-10 Hz).
 
 ```python
-# Extract neural spikes (assume it's in the 'units' key)
-spikes = data["units"]
-
-# Extract the oscillatory signal (assume it's in the 'eeg' key)
-oscillatory_signal = data["eeg"]
+theta_band = (6.0, 10.0)  # Define your frequency band range
 ```
 
-### 3. **Filter the Oscillatory Signal**
-Apply a band-pass filter to isolate the frequency range of interest (e.g., theta band: 6-10 Hz). 
+#### Step 3: Apply Bandpass Filter
+Apply a bandpass filter to the LFP signal to isolate the oscillation of interest.
 
 ```python
-# Define sampling frequency
-sampling_frequency = 1250  # Example frequency
-
-# Band-pass filter the oscillatory signal
-filtered_signal = nap.apply_bandpass_filter(oscillatory_signal, cutoff=(6, 10), fs=sampling_frequency)
+filtered_lfp = nap.apply_bandpass_filter(lfp, cutoff=theta_band, fs=<sampling_rate>, mode='butter')
 ```
 
-### 4. **Compute the Phase Using Hilbert Transform**
-Use the Hilbert transform to obtain the instantaneous phase of the filtered oscillatory signal.
+#### Step 4: Extract the Phase using Hilbert Transform
+Compute the phase of the filtered signal using the Hilbert transform.
 
 ```python
-from scipy import signal
-
-# Compute the Hilbert transform to extract the phase
-instantaneous_phase = np.angle(signal.hilbert(filtered_signal))
+import scipy.signal
+phase = nap.Tsd(t=filtered_lfp.t, d=np.angle(scipy.signal.hilbert(filtered_lfp)))
 ```
 
-### 5. **Compute Phase Preferences for Each Spike**
-Use the phase values to analyze how spikes relate to the oscillatory phase. For this, apply a tuning curve analysis on the phase values.
+#### Step 5: Determine Phase of Spikes
+Align spike times to the phase of the oscillation.
 
 ```python
-# Compute tuning curves to relate spike times to phase values
-phase_modulation = nap.compute_1d_tuning_curves(group=spikes, feature=instantaneous_phase, nb_bins=61, minmax=(-np.pi, np.pi))
+spike_phase = spikes.value_from(phase)
 ```
 
-### 6. **Visualize the Phase Preferences**
-Plot the tuning curves to visualize the relationship between spike timings and the oscillatory phase. This will help in identifying phase preferences.
+#### Step 6: Analyze Spike-Phase Coupling
+Analyze the relationship between spikes and phase using tuning curves to visualize whether there is a preferred phase at which spikes occur.
 
 ```python
+# Compute and plot phase modulation of spikes
+phase_modulation = nap.compute_1d_tuning_curves(spikes, phase, nb_bins=60, minmax=(-np.pi, np.pi))
+
 import matplotlib.pyplot as plt
-
-plt.figure(figsize=(12, 6))
-for i in range(len(phase_modulation.columns)):
-    plt.plot(phase_modulation[i], label=f"Neuron {i + 1}")
-plt.xlabel("Phase (rad)")
-plt.ylabel("Firing Rate (Hz)")
-plt.title("Phase Tuning Curves for Neural Spikes")
-plt.legend()
+plt.figure()
+plt.plot(phase_modulation)
+plt.xlabel('Phase (rad)')
+plt.ylabel('Firing rate (Hz)')
+plt.title('Spike-Phase Coupling')
 plt.show()
 ```
 
-### 7. **Interpret the Results**
-Examine the plots to identify phase locking or preferences among neural spikes. A peak in the firing rate at a specific phase indicates that the spikes are preferentially occurring at that phase of the oscillation.
+### Summary
+This analysis helps you to visualize and determine if spikes are more likely to occur at particular phases of an oscillatory rhythm. You will be able to observe how the phases might influence neural activity or identify phase preferences in the firing of neural populations, such as theta-modulated neurons in hippocampal datasets.
 
-## Conclusion
-By following this guide, you should have successfully applied phase coupling analysis to your neural spikes using filtering and Hilbert transforms. Adjust the filtering parameters based on your specific research needs and the oscillatory frequencies of interest.
-
-For further details on specific functions and their parameters, consult the Pynapple documentation.
+> Remember to replace placeholder data with actual data from your experiment. This guide can be adapted to different frequency bands and additional types of neural data. This kind of analysis can provide insights into the integration of oscillatory and spiking activity in neural circuits.
